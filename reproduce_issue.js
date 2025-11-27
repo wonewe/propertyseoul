@@ -1,0 +1,36 @@
+import http from 'http';
+
+const serviceKey = '4226375dcf4f11a502ca111a5b13a11f69d3339161644937c093a4703b4dfde1';
+const LAWD_CD = '11680';
+const DEAL_YMD = '202511';
+const numOfRows = '100';
+const pageNo = '1';
+
+const apiUrl = `http://openapi.molit.go.kr/OpenAPI_ToolInstallPackage/service/rest/RTMSOBJSvc/getRTMSDataSvcAptTradeDev`;
+
+const fullUrl = `${apiUrl}?serviceKey=${serviceKey}&LAWD_CD=${LAWD_CD}&DEAL_YMD=${DEAL_YMD}&numOfRows=${numOfRows}&pageNo=${pageNo}`;
+
+console.log(`Testing URL: ${fullUrl}`);
+
+const start = Date.now();
+
+const req = http.get(fullUrl, (res) => {
+    let data = '';
+    res.on('data', (chunk) => data += chunk);
+    res.on('end', () => {
+        const duration = Date.now() - start;
+        console.log(`Status: ${res.statusCode}`);
+        console.log(`Duration: ${duration}ms`);
+        console.log(`Data length: ${data.length}`);
+        console.log(`Data preview: ${data.substring(0, 200)}`);
+    });
+});
+
+req.on('error', (e) => {
+    console.error(`Problem with request: ${e.message}`);
+});
+
+req.setTimeout(60000, () => {
+    console.error('Request timed out after 60s');
+    req.destroy();
+});
