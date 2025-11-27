@@ -256,10 +256,11 @@ export default function NaverMap({
             <ol style={{ margin: '8px 0', paddingLeft: '20px' }}>
               <li>Application 상세 페이지 접속</li>
               <li><strong>"웹 서비스 URL"</strong> 섹션 찾기</li>
-              <li>다음 URL 추가:
+              <li>다음 URL 모두 추가 (각각 별도로):
                 <ul style={{ marginTop: '4px' }}>
                   <li><code>http://localhost:5173</code></li>
                   <li><code>http://127.0.0.1:5173</code></li>
+                  <li><strong>https://propertyseoul.vercel.app</strong> (프로덕션 필수!)</li>
                 </ul>
               </li>
               <li>저장</li>
@@ -269,6 +270,8 @@ export default function NaverMap({
             <code style={{ background: '#f0f0f0', padding: '2px 6px', borderRadius: '3px' }}>
               {API_CONFIG.NAVER_MAP_CLIENT_ID || '(설정되지 않음)'}
             </code>
+            <br />
+            <strong>현재 도메인:</strong> {typeof window !== 'undefined' ? window.location.origin : '(확인 불가)'}
             <br /><br />
             
             <strong>3. 브라우저 및 서버 재시작:</strong><br />
