@@ -156,6 +156,11 @@ export async function fetchRealtorData(
         });
 
         const jsonData = parser.parse(xmlText);
+
+        // DEBUG: Log raw XML and parsed JSON
+        console.log('Raw XML:', xmlText);
+        console.log('Parsed JSON:', jsonData);
+
         response = { data: jsonData };
       } catch (parseError) {
         console.error('XML 파싱 실패:', parseError);

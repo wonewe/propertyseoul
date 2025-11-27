@@ -23,7 +23,15 @@ const req = http.get(fullUrl, (res) => {
         console.log(`Status: ${res.statusCode}`);
         console.log(`Duration: ${duration}ms`);
         console.log(`Data length: ${data.length}`);
-        console.log(`Data preview: ${data.substring(0, 200)}`);
+
+        // Simple XML tag extraction to see field names
+        const matches = data.match(/<([^>]+)>([^<]+)<\/\1>/g);
+        if (matches && matches.length > 0) {
+            console.log('First 10 fields found:');
+            matches.slice(0, 10).forEach(m => console.log(m));
+        } else {
+            console.log('Data preview:', data.substring(0, 500));
+        }
     });
 });
 
