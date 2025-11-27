@@ -50,7 +50,8 @@ export default function NaverMap({
     // 주의: 신규 API에서는 ncpClientId 대신 ncpKeyId 사용
     const script = document.createElement('script');
     script.type = 'text/javascript';
-    script.src = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${API_CONFIG.NAVER_MAP_CLIENT_ID}`;
+    // geocoder 서브모듈 추가
+    script.src = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${API_CONFIG.NAVER_MAP_CLIENT_ID}&submodules=geocoder`;
     script.async = true;
 
     script.onload = () => {
@@ -105,7 +106,7 @@ export default function NaverMap({
     if (!mapInstanceRef.current) {
       mapInstanceRef.current = new window.naver.maps.Map(mapRef.current, {
         center: seoulCenter,
-        zoom: 12,
+        zoom: 14, // 줌 레벨 조정
       });
     }
 
@@ -116,20 +117,36 @@ export default function NaverMap({
     // 주소를 좌표로 변환하여 마커 표시
     if (properties.length > 0) {
       properties.forEach((property) => {
-        // 좌표가 있는 경우 직접 사용
-        if (property.latitude && property.longitude) {
-          const position = new window.naver.maps.LatLng(
-            property.latitude,
-            property.longitude
-          );
-          createMarker(position, property);
-        } else {
-          // 좌표가 없는 경우 주소로 검색 (네이버 지오코딩 API 사용 가능)
-          // 현재는 샘플 좌표 사용
-          const sampleLat = 37.5665 + (Math.random() - 0.5) * 0.1;
-          const sampleLng = 126.9780 + (Math.random() - 0.5) * 0.1;
-          const position = new window.naver.maps.LatLng(sampleLat, sampleLng);
-          createMarker(position, property);
+        // 초기에는 결정론적 랜덤 좌표 사용 (빠른 렌더링)
+        const position = new window.naver.maps.LatLng(
+          property.latitude || 37.5665,
+          property.longitude || 126.9780
+        );
+
+        const marker = createMarker(position, property);
+
+        // 실제 주소로 지오코딩 시도 (정확한 위치)
+        // 주의: 대량 요청 시 429 에러 발생 가능하므로 순차적으로 처리하거나 딜레이 필요할 수 있음
+        // 여기서는 개별적으로 시도
+        if (window.naver.maps.Service && window.naver.maps.Service.geocode) {
+          const query = property.addressDetail
+            ? `${property.address} ${property.addressDetail}`
+            : property.address;
+
+          window.naver.maps.Service.geocode({
+            query: query
+          }, (status: any, response: any) => {
+            if (status === window.naver.maps.Service.Status.OK) {
+              const result = response.v2.addresses[0];
+              if (result) {
+                const newPosition = new window.naver.maps.LatLng(result.y, result.x);
+                marker.setPosition(newPosition);
+              }
+            } else {
+              // 지오코딩 실패 시 (주소 불명확 등) 기존 좌표 유지
+              // console.warn('Geocoding failed for:', query);
+            }
+          });
         }
       });
 
@@ -141,6 +158,7 @@ export default function NaverMap({
         mapInstanceRef.current.setZoom(16);
       } else if (properties.length > 0) {
         // 모든 부동산이 보이도록 지도 범위 조정
+        // 지오코딩이 비동기라 초기에는 랜덤 좌표 기준일 수 있음
         const bounds = new window.naver.maps.LatLngBounds();
         markersRef.current.forEach(marker => {
           bounds.extend(marker.getPosition());
@@ -163,6 +181,7 @@ export default function NaverMap({
             position: relative;
             cursor: pointer;
             transition: transform 0.2s;
+            z-index: ${isSelected ? 100 : 1};
           ">
             <div style="
               background-color: ${isSelected ? '#2563eb' : '#ffffff'};
@@ -246,7 +265,7 @@ export default function NaverMap({
               border-radius: 6px;
               font-size: 12px;
               font-weight: 600;
-            ">${property.area}m²</span>
+            ">${property.area}m² (${Math.round(property.area * 0.3025)}평)</span>
             <span style="
               background: #f1f5f9;
               color: #475569;
@@ -290,6 +309,7 @@ export default function NaverMap({
     });
 
     markersRef.current.push(marker);
+    return marker;
   };
 
   if (!API_CONFIG.NAVER_MAP_CLIENT_ID) {

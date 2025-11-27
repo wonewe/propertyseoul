@@ -58,7 +58,9 @@ export default function PropertyCard({
 
         <div className="property-info-row">
           <span className="property-label">면적</span>
-          <span className="property-value">{property.area}m²</span>
+          <span className="property-value">
+            {property.area}m² ({Math.round(property.area * 0.3025)}평)
+          </span>
         </div>
 
         <div className="property-info-row">
