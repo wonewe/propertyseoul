@@ -156,6 +156,19 @@ export async function fetchRealtorData(
         });
 
         const jsonData = parser.parse(xmlText);
+
+        // DEBUG: Log raw XML and parsed JSON
+        console.log('Raw XML:', xmlText);
+        console.log('Parsed JSON:', jsonData);
+
+        if (jsonData?.response?.body?.items?.item) {
+          const firstItem = Array.isArray(jsonData.response.body.items.item)
+            ? jsonData.response.body.items.item[0]
+            : jsonData.response.body.items.item;
+          console.log('First Item Keys:', Object.keys(firstItem));
+          console.log('First Item:', firstItem);
+        }
+
         response = { data: jsonData };
       } catch (parseError) {
         console.error('XML 파싱 실패:', parseError);
@@ -169,8 +182,9 @@ export async function fetchRealtorData(
     }
 
     const resultCode = response.data.response.header.resultCode;
-    // fast-xml-parser가 '00'을 숫자 0으로 파싱할 수 있음
-    if (String(resultCode) !== '00' && resultCode !== 0) {
+    // '00', '000', 0 모두 성공으로 처리
+    const codeStr = String(resultCode).trim();
+    if (codeStr !== '00' && codeStr !== '000' && resultCode !== 0) {
       throw new Error(response.data.response.header.resultMsg);
     }
 
@@ -179,9 +193,13 @@ export async function fetchRealtorData(
     // 단일 객체인 경우 배열로 변환
     const itemArray = Array.isArray(items) ? items : [items];
 
-    return itemArray
+    const transformedItems = itemArray
       .filter(item => item != null)
       .map(item => transformApiResponseToProperty(item, district));
+
+    console.log('Transformed Items (First 2):', transformedItems.slice(0, 2));
+
+    return transformedItems;
   } catch (error) {
     console.error('부동산 데이터 조회 실패:', error);
     // API 키가 없거나 오류 발생 시 샘플 데이터 반환
