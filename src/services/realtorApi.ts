@@ -61,19 +61,46 @@ function formatDateForAPI(date: Date): string {
  * API 응답 데이터를 Property 객체로 변환
  */
 function transformApiResponseToProperty(item: any, district: string): Property {
+  // XML 태그 매핑 (apis.data.go.kr 기준)
+  // aptNm: 아파트명
+  // dealAmount: 거래금액 (콤마 포함 문자열)
+  // excluUseAr: 전용면적
+  // floor: 층
+  // dealYear/Month/Day: 거래일
+  // buildYear: 건축년도
+  // umdNm: 법정동
+  // jibun: 지번
+
+  // 안전한 파싱을 위해 문자열 변환 후 숫자만 추출
+  const dealAmountStr = String(item.dealAmount || item.거래금액 || '0').trim();
+  const price = parseInt(dealAmountStr.replace(/[^0-9]/g, '')); // 콤마 등 숫자 외 문자 제거
+
+  const year = String(item.dealYear || item.년 || '').trim();
+  const month = String(item.dealMonth || item.월 || '').trim().padStart(2, '0');
+  const day = String(item.dealDay || item.일 || '').trim().padStart(2, '0');
+
+  const areaStr = String(item.excluUseAr || item.전용면적 || item.area || '0').trim();
+  const area = parseFloat(areaStr);
+
+  const floorStr = String(item.floor || item.층 || '0').trim();
+  const floor = parseInt(floorStr);
+
+  const buildYearStr = String(item.buildYear || item.건축년도 || item.constructionYear || '0').trim();
+  const buildYear = parseInt(buildYearStr);
+
   return {
     id: `${item.일련번호 || item.serialNumber || Date.now()}-${Math.random()}`,
-    address: item.법정동 || item.roadAddress || '',
-    addressDetail: item.지번 || '',
+    address: String(item.umdNm || item.법정동 || item.roadAddress || '').trim(),
+    addressDetail: String(item.jibun || item.지번 || '').trim(),
     district: district,
-    dong: item.법정동 || item.dong || '',
-    buildingName: item.아파트 || item.연립다세대 || item.buildingName || '',
+    dong: String(item.umdNm || item.법정동 || item.dong || '').trim(),
+    buildingName: String(item.aptNm || item.아파트 || item.연립다세대 || item.buildingName || '').trim(),
     buildingType: determineBuildingType(item),
-    area: parseFloat(item.전용면적 || item.area || '0'),
-    floor: parseInt(item.층 || item.floor || '0'),
-    price: parseInt(item.거래금액?.replace(/,/g, '') || item.price || '0'),
-    dealDate: item.년 || item.월 || item.dealDate || '',
-    constructionYear: parseInt(item.건축년도 || item.constructionYear || '0'),
+    area: isNaN(area) ? 0 : area,
+    floor: isNaN(floor) ? 0 : floor,
+    price: isNaN(price) ? 0 : price,
+    dealDate: (year && month && day) ? `${year}-${month}-${day}` : (item.dealDate || ''),
+    constructionYear: isNaN(buildYear) ? 0 : buildYear,
   };
 }
 
