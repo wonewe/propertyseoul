@@ -47,9 +47,10 @@ export default function NaverMap({
 
     // 신규 NAVER Maps JavaScript API v3 사용
     // 가이드: https://navermaps.github.io/maps.js.ncp/docs/tutorial-2-Getting-Started.html
+    // 주의: 신규 API에서는 ncpClientId 대신 ncpKeyId 사용
     const script = document.createElement('script');
     script.type = 'text/javascript';
-    script.src = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpClientId=${API_CONFIG.NAVER_MAP_CLIENT_ID}`;
+    script.src = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${API_CONFIG.NAVER_MAP_CLIENT_ID}`;
     script.async = true;
     
     script.onload = () => {
