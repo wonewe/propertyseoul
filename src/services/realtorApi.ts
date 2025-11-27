@@ -116,16 +116,57 @@ export async function fetchRealtorData(
     };
 
     let url: string;
+    let response: any;
+    
     if (isProduction) {
       // 프로덕션: Vercel Serverless Function 프록시 사용
       const proxyUrl = `${window.location.origin}/api/realtor`;
-      url = proxyUrl;
+      
+      // XML 응답 처리
+      const xmlResponse = await fetch(`${proxyUrl}?${new URLSearchParams({
+        serviceKey: params.serviceKey,
+        LAWD_CD: params.LAWD_CD,
+        DEAL_YMD: params.DEAL_YMD,
+        numOfRows: String(params.numOfRows),
+        pageNo: String(params.pageNo),
+      }).toString()}`);
+      
+      if (!xmlResponse.ok) {
+        // 에러 응답 시 JSON인지 확인
+        const contentType = xmlResponse.headers.get('content-type');
+        if (contentType?.includes('application/json')) {
+          const errorData = await xmlResponse.json().catch(() => ({}));
+          throw new Error(errorData.message || errorData.error || `HTTP ${xmlResponse.status}: ${xmlResponse.statusText}`);
+        } else {
+          const errorText = await xmlResponse.text().catch(() => '');
+          throw new Error(`프록시 에러 (${xmlResponse.status}): ${errorText || xmlResponse.statusText}`);
+        }
+      }
+      
+      const xmlText = await xmlResponse.text();
+      
+      // XML을 JSON으로 변환
+      try {
+        const { XMLParser } = await import('fast-xml-parser');
+        const parser = new XMLParser({
+          ignoreAttributes: false,
+          attributeNamePrefix: '@_',
+          textNodeName: '#text',
+          parseAttributeValue: true,
+        });
+        
+        const jsonData = parser.parse(xmlText);
+        response = { data: jsonData };
+      } catch (parseError) {
+        console.error('XML 파싱 실패:', parseError);
+        // XML 파싱 실패 시 샘플 데이터 반환
+        return getSampleData(district);
+      }
     } else {
       // 개발: 직접 호출 (HTTP 허용)
       url = `${REALTOR_API_BASE_URL.replace('https://', 'http://')}/getRTMSDataSvcAptTradeDev`;
+      response = await axios.get<RealtorApiResponse>(url, { params });
     }
-
-    const response = await axios.get<RealtorApiResponse>(url, { params });
     
     if (response.data.response.header.resultCode !== '00') {
       throw new Error(response.data.response.header.resultMsg);

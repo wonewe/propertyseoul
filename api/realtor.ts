@@ -1,5 +1,4 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { XMLParser } from 'fast-xml-parser';
 
 export default async function handler(
   req: VercelRequest,
@@ -24,42 +23,79 @@ export default async function handler(
   try {
     const { serviceKey, LAWD_CD, DEAL_YMD, numOfRows, pageNo } = req.query;
 
+    // 파라미터 검증
     if (!serviceKey || !LAWD_CD || !DEAL_YMD) {
-      res.status(400).json({ error: 'Missing required parameters' });
+      res.status(400).json({ 
+        error: 'Missing required parameters',
+        received: { 
+          hasServiceKey: !!serviceKey, 
+          hasLAWD_CD: !!LAWD_CD, 
+          hasDEAL_YMD: !!DEAL_YMD 
+        },
+        query: req.query
+      });
       return;
     }
 
     // HTTP API를 서버에서 호출 (Mixed Content 문제 해결)
     const apiUrl = `http://openapi.molit.go.kr/OpenAPI_ToolInstallPackage/service/rest/RTMSOBJSvc/getRTMSDataSvcAptTradeDev`;
     const params = new URLSearchParams({
-      serviceKey: serviceKey as string,
-      LAWD_CD: LAWD_CD as string,
-      DEAL_YMD: DEAL_YMD as string,
-      numOfRows: (numOfRows as string) || '100',
-      pageNo: (pageNo as string) || '1',
+      serviceKey: String(serviceKey),
+      LAWD_CD: String(LAWD_CD),
+      DEAL_YMD: String(DEAL_YMD),
+      numOfRows: String(numOfRows || '100'),
+      pageNo: String(pageNo || '1'),
     });
 
-    const response = await fetch(`${apiUrl}?${params.toString()}`);
-    const xmlData = await response.text();
-
-    // XML을 JSON으로 변환
-    const parser = new XMLParser({
-      ignoreAttributes: false,
-      attributeNamePrefix: '@_',
-      textNodeName: '#text',
-      parseAttributeValue: true,
+    const fullUrl = `${apiUrl}?${params.toString()}`;
+    
+    console.log('Fetching from:', apiUrl);
+    console.log('Params:', { LAWD_CD, DEAL_YMD, numOfRows, pageNo });
+    
+    const response = await fetch(fullUrl, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/xml, text/xml, */*',
+      },
     });
     
-    const jsonData = parser.parse(xmlData);
+    console.log('Response status:', response.status);
+    
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => '');
+      res.status(response.status).json({
+        error: 'API request failed',
+        status: response.status,
+        statusText: response.statusText,
+        body: errorText.substring(0, 500),
+      });
+      return;
+    }
 
-    // JSON으로 반환
-    res.setHeader('Content-Type', 'application/json');
-    res.status(200).json(jsonData);
+    const xmlData = await response.text();
+    
+    if (!xmlData || xmlData.trim().length === 0) {
+      res.status(500).json({
+        error: 'Empty response from API',
+      });
+      return;
+    }
+
+    // XML을 그대로 반환 (클라이언트에서 파싱)
+    res.setHeader('Content-Type', 'application/xml; charset=utf-8');
+    res.status(200).send(xmlData);
   } catch (error) {
     console.error('Realtor API proxy error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorStack = error instanceof Error ? error.stack : undefined;
+    
     res.status(500).json({
       error: 'Proxy failed',
-      message: error instanceof Error ? error.message : 'Unknown error',
+      message: errorMessage,
+      details: error instanceof Error ? {
+        name: error.name,
+        stack: errorStack,
+      } : undefined,
     });
   }
 }
