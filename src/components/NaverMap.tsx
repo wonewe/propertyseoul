@@ -52,7 +52,7 @@ export default function NaverMap({
     script.type = 'text/javascript';
     script.src = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${API_CONFIG.NAVER_MAP_CLIENT_ID}`;
     script.async = true;
-    
+
     script.onload = () => {
       if (window.naver && window.naver.maps) {
         setMapLoaded(true);
@@ -160,42 +160,117 @@ export default function NaverMap({
       icon: {
         content: `
           <div style="
-            background-color: ${isSelected ? '#ff4444' : '#4CAF50'};
-            width: 30px;
-            height: 30px;
-            border-radius: 50%;
-            border: 2px solid white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: bold;
-            font-size: 12px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-          ">${index + 1}</div>
+            position: relative;
+            cursor: pointer;
+            transition: transform 0.2s;
+          ">
+            <div style="
+              background-color: ${isSelected ? '#2563eb' : '#ffffff'};
+              color: ${isSelected ? '#ffffff' : '#1e293b'};
+              padding: 6px 10px;
+              border-radius: 20px;
+              font-weight: 700;
+              font-size: 13px;
+              box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+              border: 2px solid ${isSelected ? '#ffffff' : '#2563eb'};
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              white-space: nowrap;
+            ">
+              ${property.price >= 10000 ? `${(property.price / 10000).toFixed(1)}억` : `${property.price.toLocaleString()}`}
+            </div>
+            <div style="
+              position: absolute;
+              bottom: -6px;
+              left: 50%;
+              transform: translateX(-50%);
+              width: 0;
+              height: 0;
+              border-left: 6px solid transparent;
+              border-right: 6px solid transparent;
+              border-top: 6px solid ${isSelected ? '#ffffff' : '#2563eb'};
+            "></div>
+          </div>
         `,
-        anchor: new window.naver.maps.Point(15, 15),
+        anchor: new window.naver.maps.Point(20, 35),
       },
     });
 
     // 인포윈도우 생성
     const infoWindow = new window.naver.maps.InfoWindow({
       content: `
-        <div style="padding: 10px; min-width: 200px;">
-          <h3 style="margin: 0 0 8px 0; font-size: 14px; font-weight: bold;">
+        <div style="
+          padding: 16px;
+          min-width: 240px;
+          background: white;
+          border-radius: 12px;
+          box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+          border: none;
+          font-family: 'Pretendard', sans-serif;
+        ">
+          <h3 style="
+            margin: 0 0 8px 0;
+            font-size: 16px;
+            font-weight: 700;
+            color: #1e293b;
+            line-height: 1.4;
+          ">
             ${property.buildingName || property.address}
           </h3>
-          <p style="margin: 4px 0; font-size: 12px; color: #666;">
+          <p style="
+            margin: 0 0 12px 0;
+            font-size: 13px;
+            color: #64748b;
+            line-height: 1.4;
+          ">
             ${property.address}
           </p>
-          <p style="margin: 4px 0; font-size: 12px;">
-            <strong>${property.buildingType}</strong> | ${property.area}m²
-          </p>
-          <p style="margin: 4px 0; font-size: 12px; color: #e53935;">
-            ${property.price.toLocaleString()}만원
+          <div style="
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+          ">
+            <span style="
+              background: #f1f5f9;
+              color: #475569;
+              padding: 4px 8px;
+              border-radius: 6px;
+              font-size: 12px;
+              font-weight: 600;
+            ">${property.buildingType}</span>
+            <span style="
+              background: #f1f5f9;
+              color: #475569;
+              padding: 4px 8px;
+              border-radius: 6px;
+              font-size: 12px;
+              font-weight: 600;
+            ">${property.area}m²</span>
+            <span style="
+              background: #f1f5f9;
+              color: #475569;
+              padding: 4px 8px;
+              border-radius: 6px;
+              font-size: 12px;
+              font-weight: 600;
+            ">${property.floor}층</span>
+          </div>
+          <p style="
+            margin: 0;
+            font-size: 18px;
+            font-weight: 800;
+            color: #2563eb;
+            text-align: right;
+          ">
+            ${property.price >= 10000 ? `${(property.price / 10000).toFixed(1)}억` : `${property.price.toLocaleString()}만원`}
           </p>
         </div>
       `,
+      borderWidth: 0,
+      backgroundColor: "transparent",
+      anchorSize: new window.naver.maps.Size(0, 0),
+      pixelOffset: new window.naver.maps.Point(0, -10),
     });
 
     // 마커 클릭 이벤트
@@ -237,8 +312,8 @@ export default function NaverMap({
       <div className="naver-map-container" style={{ height }}>
         <div className="map-placeholder">
           <h3>⚠️ 네이버 지도 로드 실패</h3>
-          <pre style={{ 
-            textAlign: 'left', 
+          <pre style={{
+            textAlign: 'left',
             whiteSpace: 'pre-wrap',
             background: '#fff',
             padding: '16px',
@@ -251,7 +326,7 @@ export default function NaverMap({
           </pre>
           <div style={{ marginTop: '16px', fontSize: '14px', textAlign: 'left', maxWidth: '600px' }}>
             <strong>🔴 인증 실패 - 해결 방법:</strong><br /><br />
-            
+
             <strong>1. 웹 서비스 URL 등록 (가장 중요!)</strong><br />
             네이버 클라우드 플랫폼 콘솔에서:
             <ol style={{ margin: '8px 0', paddingLeft: '20px' }}>
@@ -266,7 +341,7 @@ export default function NaverMap({
               </li>
               <li>저장</li>
             </ol>
-            
+
             <strong>2. 현재 Client ID 확인:</strong><br />
             <code style={{ background: '#f0f0f0', padding: '2px 6px', borderRadius: '3px' }}>
               {API_CONFIG.NAVER_MAP_CLIENT_ID || '(설정되지 않음)'}
@@ -274,14 +349,14 @@ export default function NaverMap({
             <br />
             <strong>현재 도메인:</strong> {typeof window !== 'undefined' ? window.location.origin : '(확인 불가)'}
             <br /><br />
-            
+
             <strong>3. 브라우저 및 서버 재시작:</strong><br />
             <ul style={{ margin: '8px 0', paddingLeft: '20px' }}>
               <li>브라우저 완전히 닫기</li>
               <li>개발 서버 재시작 (Ctrl+C 후 npm run dev)</li>
             </ul>
             <br />
-            
+
             📋 <strong>상세 가이드:</strong> 프로젝트의 <code>NAVER_MAP_SETUP.md</code> 파일 참고<br />
             📚 <a href="https://navermaps.github.io/maps.js.ncp/docs/tutorial-2-Getting-Started.html" target="_blank" rel="noopener noreferrer" style={{ color: '#2196F3', textDecoration: 'underline' }}>신규 API 가이드</a>
           </div>
