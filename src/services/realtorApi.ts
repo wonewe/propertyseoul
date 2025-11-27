@@ -87,16 +87,26 @@ function formatDateForAPI(date: Date): string {
 }
 
 /**
- * 문자열을 해시하여 0~1 사이의 값을 반환
+ * 시드 기반 난수 생성기 (Linear Congruential Generator)
  */
-function stringToHash(str: string): number {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    const char = str.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash = hash & hash; // Convert to 32bit integer
+class SeededRandom {
+  private seed: number;
+
+  constructor(seedStr: string) {
+    let hash = 0;
+    for (let i = 0; i < seedStr.length; i++) {
+      const char = seedStr.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash;
+    }
+    this.seed = Math.abs(hash);
   }
-  return (Math.abs(hash) % 1000) / 1000;
+
+  // 0 ~ 1 사이의 난수 반환
+  next(): number {
+    this.seed = (this.seed * 9301 + 49297) % 233280;
+    return this.seed / 233280;
+  }
 }
 
 /**
@@ -136,10 +146,18 @@ function transformApiResponseToProperty(item: any, district: string): Property {
 
   // 좌표 생성 (결정론적 랜덤)
   const center = DISTRICT_COORDINATES[district] || { lat: 37.5665, lng: 126.9780 };
-  // 주소+건물명을 시드로 사용하여 항상 같은 위치에 표시되도록 함
-  // 범위: 중심점 기준 약 ±0.02도 (약 2km)
-  const latOffset = (stringToHash(address + buildingName + 'lat') - 0.5) * 0.04;
-  const lngOffset = (stringToHash(address + buildingName + 'lng') - 0.5) * 0.04;
+
+  // 주소, 건물명, 층, 가격을 모두 시드로 사용하여 고유하면서도 고정된 위치 생성
+  const seedStr = `${address}_${buildingName}_${floor}_${price}`;
+  const rng = new SeededRandom(seedStr);
+
+  // 원형 분포로 자연스럽게 배치 (최대 반경 약 1.5km)
+  // sqrt(random)을 사용하여 중심에 몰리지 않고 균일하게 분포하도록 함
+  const radius = Math.sqrt(rng.next()) * 0.015;
+  const angle = rng.next() * 2 * Math.PI;
+
+  const latOffset = radius * Math.cos(angle);
+  const lngOffset = radius * Math.sin(angle) * 1.5; // 경도 보정 (위도에 따른 거리 차이 고려)
 
   return {
     id: `${item.일련번호 || item.serialNumber || Date.now()}-${Math.random()}`,
