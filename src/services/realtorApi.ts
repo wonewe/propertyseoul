@@ -156,6 +156,19 @@ export async function fetchRealtorData(
         });
 
         const jsonData = parser.parse(xmlText);
+
+        // DEBUG: Log raw XML and parsed JSON
+        console.log('Raw XML:', xmlText);
+        console.log('Parsed JSON:', jsonData);
+
+        if (jsonData?.response?.body?.items?.item) {
+          const firstItem = Array.isArray(jsonData.response.body.items.item)
+            ? jsonData.response.body.items.item[0]
+            : jsonData.response.body.items.item;
+          console.log('First Item Keys:', Object.keys(firstItem));
+          console.log('First Item:', firstItem);
+        }
+
         response = { data: jsonData };
       } catch (parseError) {
         console.error('XML 파싱 실패:', parseError);
