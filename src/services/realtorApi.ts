@@ -102,11 +102,11 @@ export async function fetchRealtorData(
     }
 
     const dealYmd = formatDateForAPI(new Date(year, month - 1));
-    
+
     // 프로덕션 환경(HTTPS)에서는 Vercel Serverless Function 프록시 사용
     // 개발 환경에서는 직접 호출
     const isProduction = typeof window !== 'undefined' && window.location.protocol === 'https:';
-    
+
     const params = {
       serviceKey: API_CONFIG.REALTOR_API_KEY,
       LAWD_CD: districtCode,
@@ -117,11 +117,11 @@ export async function fetchRealtorData(
 
     let url: string;
     let response: any;
-    
+
     if (isProduction) {
       // 프로덕션: Vercel Serverless Function 프록시 사용
       const proxyUrl = `${window.location.origin}/api/realtor`;
-      
+
       // XML 응답 처리
       const xmlResponse = await fetch(`${proxyUrl}?${new URLSearchParams({
         serviceKey: params.serviceKey,
@@ -130,7 +130,7 @@ export async function fetchRealtorData(
         numOfRows: String(params.numOfRows),
         pageNo: String(params.pageNo),
       }).toString()}`);
-      
+
       if (!xmlResponse.ok) {
         // 에러 응답 시 JSON인지 확인
         const contentType = xmlResponse.headers.get('content-type');
@@ -142,9 +142,9 @@ export async function fetchRealtorData(
           throw new Error(`프록시 에러 (${xmlResponse.status}): ${errorText || xmlResponse.statusText}`);
         }
       }
-      
+
       const xmlText = await xmlResponse.text();
-      
+
       // XML을 JSON으로 변환
       try {
         const { XMLParser } = await import('fast-xml-parser');
@@ -154,7 +154,7 @@ export async function fetchRealtorData(
           textNodeName: '#text',
           parseAttributeValue: true,
         });
-        
+
         const jsonData = parser.parse(xmlText);
         response = { data: jsonData };
       } catch (parseError) {
@@ -167,16 +167,18 @@ export async function fetchRealtorData(
       url = `${REALTOR_API_BASE_URL.replace('https://', 'http://')}/getRTMSDataSvcAptTradeDev`;
       response = await axios.get<RealtorApiResponse>(url, { params });
     }
-    
-    if (response.data.response.header.resultCode !== '00') {
+
+    const resultCode = response.data.response.header.resultCode;
+    // fast-xml-parser가 '00'을 숫자 0으로 파싱할 수 있음
+    if (String(resultCode) !== '00' && resultCode !== 0) {
       throw new Error(response.data.response.header.resultMsg);
     }
 
     const items = response.data.response.body.items?.item || [];
-    
+
     // 단일 객체인 경우 배열로 변환
     const itemArray = Array.isArray(items) ? items : [items];
-    
+
     return itemArray
       .filter(item => item != null)
       .map(item => transformApiResponseToProperty(item, district));
@@ -238,7 +240,7 @@ function getSampleData(district: string): Property[] {
       longitude: 127.0490,
     },
   ];
-  
+
   return sampleProperties;
 }
 
