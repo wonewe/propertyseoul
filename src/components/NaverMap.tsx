@@ -279,7 +279,7 @@ export default function NaverMap({
             <br />
             
             📋 <strong>상세 가이드:</strong> 프로젝트의 <code>NAVER_MAP_SETUP.md</code> 파일 참고<br />
-            📚 <a href="https://navermaps.github.io/maps.js.ncp/docs/tutorial-2-Getting-Started.html" target="_blank" rel="noopener noreferrer" style="color: #2196F3; textDecoration: 'underline';">신규 API 가이드</a>
+            📚 <a href="https://navermaps.github.io/maps.js.ncp/docs/tutorial-2-Getting-Started.html" target="_blank" rel="noopener noreferrer" style={{ color: '#2196F3', textDecoration: 'underline' }}>신규 API 가이드</a>
           </div>
         </div>
       </div>
