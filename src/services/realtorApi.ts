@@ -103,8 +103,9 @@ export async function fetchRealtorData(
 
     const dealYmd = formatDateForAPI(new Date(year, month - 1));
     
-    // 아파트 실거래가 조회 API
-    const url = `${REALTOR_API_BASE_URL}/getRTMSDataSvcAptTradeDev`;
+    // 프로덕션 환경(HTTPS)에서는 Vercel Serverless Function 프록시 사용
+    // 개발 환경에서는 직접 호출
+    const isProduction = typeof window !== 'undefined' && window.location.protocol === 'https:';
     
     const params = {
       serviceKey: API_CONFIG.REALTOR_API_KEY,
@@ -113,6 +114,16 @@ export async function fetchRealtorData(
       numOfRows: 100,
       pageNo: 1,
     };
+
+    let url: string;
+    if (isProduction) {
+      // 프로덕션: Vercel Serverless Function 프록시 사용
+      const proxyUrl = `${window.location.origin}/api/realtor`;
+      url = proxyUrl;
+    } else {
+      // 개발: 직접 호출 (HTTP 허용)
+      url = `${REALTOR_API_BASE_URL.replace('https://', 'http://')}/getRTMSDataSvcAptTradeDev`;
+    }
 
     const response = await axios.get<RealtorApiResponse>(url, { params });
     

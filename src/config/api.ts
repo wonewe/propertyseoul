@@ -15,7 +15,8 @@ export const API_CONFIG = {
 };
 
 // 국토교통부 실거래가 API 기본 URL
-export const REALTOR_API_BASE_URL = 'http://openapi.molit.go.kr/OpenAPI_ToolInstallPackage/service/rest/RTMSOBJSvc';
+// HTTPS 사용 (Mixed Content 에러 방지)
+export const REALTOR_API_BASE_URL = 'https://openapi.molit.go.kr/OpenAPI_ToolInstallPackage/service/rest/RTMSOBJSvc';
 
 // 네이버 검색 API 기본 URL
 export const NAVER_SEARCH_API_BASE_URL = 'https://openapi.naver.com/v1/search';
