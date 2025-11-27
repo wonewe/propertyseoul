@@ -31,6 +31,35 @@ const DISTRICT_CODE_MAP: Record<string, string> = {
   '중랑구': '11260',
 };
 
+// 구별 중심 좌표 (네이버 지도 기준)
+const DISTRICT_COORDINATES: Record<string, { lat: number; lng: number }> = {
+  '강남구': { lat: 37.5172, lng: 127.0473 },
+  '강동구': { lat: 37.5301, lng: 127.1237 },
+  '강북구': { lat: 37.6396, lng: 127.0257 },
+  '강서구': { lat: 37.5509, lng: 126.8497 },
+  '관악구': { lat: 37.4784, lng: 126.9516 },
+  '광진구': { lat: 37.5385, lng: 127.0823 },
+  '구로구': { lat: 37.4954, lng: 126.8874 },
+  '금천구': { lat: 37.4568, lng: 126.8954 },
+  '노원구': { lat: 37.6542, lng: 127.0568 },
+  '도봉구': { lat: 37.6688, lng: 127.0471 },
+  '동대문구': { lat: 37.5744, lng: 127.0400 },
+  '동작구': { lat: 37.5124, lng: 126.9393 },
+  '마포구': { lat: 37.5663, lng: 126.9016 },
+  '서대문구': { lat: 37.5791, lng: 126.9368 },
+  '서초구': { lat: 37.4837, lng: 127.0324 },
+  '성동구': { lat: 37.5633, lng: 127.0371 },
+  '성북구': { lat: 37.5891, lng: 127.0182 },
+  '송파구': { lat: 37.5145, lng: 127.1066 },
+  '양천구': { lat: 37.5169, lng: 126.8660 },
+  '영등포구': { lat: 37.5264, lng: 126.8962 },
+  '용산구': { lat: 37.5326, lng: 126.9900 },
+  '은평구': { lat: 37.6027, lng: 126.9291 },
+  '종로구': { lat: 37.5730, lng: 126.9794 },
+  '중구': { lat: 37.5641, lng: 126.9979 },
+  '중랑구': { lat: 37.6066, lng: 127.0927 },
+};
+
 interface RealtorApiResponse {
   response: {
     header: {
@@ -55,6 +84,19 @@ function formatDateForAPI(date: Date): string {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
   return `${year}${month}`;
+}
+
+/**
+ * 문자열을 해시하여 0~1 사이의 값을 반환
+ */
+function stringToHash(str: string): number {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32bit integer
+  }
+  return (Math.abs(hash) % 1000) / 1000;
 }
 
 /**
@@ -88,19 +130,32 @@ function transformApiResponseToProperty(item: any, district: string): Property {
   const buildYearStr = String(item.buildYear || item.건축년도 || item.constructionYear || '0').trim();
   const buildYear = parseInt(buildYearStr);
 
+  const address = String(item.umdNm || item.법정동 || item.roadAddress || '').trim();
+  const buildingName = String(item.aptNm || item.아파트 || item.연립다세대 || item.buildingName || '').trim();
+  const jibun = String(item.jibun || item.지번 || '').trim();
+
+  // 좌표 생성 (결정론적 랜덤)
+  const center = DISTRICT_COORDINATES[district] || { lat: 37.5665, lng: 126.9780 };
+  // 주소+건물명을 시드로 사용하여 항상 같은 위치에 표시되도록 함
+  // 범위: 중심점 기준 약 ±0.02도 (약 2km)
+  const latOffset = (stringToHash(address + buildingName + 'lat') - 0.5) * 0.04;
+  const lngOffset = (stringToHash(address + buildingName + 'lng') - 0.5) * 0.04;
+
   return {
     id: `${item.일련번호 || item.serialNumber || Date.now()}-${Math.random()}`,
-    address: String(item.umdNm || item.법정동 || item.roadAddress || '').trim(),
-    addressDetail: String(item.jibun || item.지번 || '').trim(),
+    address: address,
+    addressDetail: jibun,
     district: district,
-    dong: String(item.umdNm || item.법정동 || item.dong || '').trim(),
-    buildingName: String(item.aptNm || item.아파트 || item.연립다세대 || item.buildingName || '').trim(),
+    dong: address,
+    buildingName: buildingName,
     buildingType: determineBuildingType(item),
     area: isNaN(area) ? 0 : area,
     floor: isNaN(floor) ? 0 : floor,
     price: isNaN(price) ? 0 : price,
     dealDate: (year && month && day) ? `${year}-${month}-${day}` : (item.dealDate || ''),
     constructionYear: isNaN(buildYear) ? 0 : buildYear,
+    latitude: center.lat + latOffset,
+    longitude: center.lng + lngOffset,
   };
 }
 
