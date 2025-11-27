@@ -1,5 +1,10 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
+// Vercel Serverless Function에서 HTTP 클라이언트 사용
+// Node.js 18+ 에서는 fetch가 기본 제공되지만, 안정성을 위해 https 모듈 사용
+import https from 'https';
+import http from 'http';
+
 export default async function handler(
   req: VercelRequest,
   res: VercelResponse,
@@ -31,13 +36,12 @@ export default async function handler(
           hasServiceKey: !!serviceKey, 
           hasLAWD_CD: !!LAWD_CD, 
           hasDEAL_YMD: !!DEAL_YMD 
-        },
-        query: req.query
+        }
       });
       return;
     }
 
-    // HTTP API를 서버에서 호출 (Mixed Content 문제 해결)
+    // HTTP API URL 생성
     const apiUrl = `http://openapi.molit.go.kr/OpenAPI_ToolInstallPackage/service/rest/RTMSOBJSvc/getRTMSDataSvcAptTradeDev`;
     const params = new URLSearchParams({
       serviceKey: String(serviceKey),
@@ -49,53 +53,66 @@ export default async function handler(
 
     const fullUrl = `${apiUrl}?${params.toString()}`;
     
-    console.log('Fetching from:', apiUrl);
-    console.log('Params:', { LAWD_CD, DEAL_YMD, numOfRows, pageNo });
-    
-    const response = await fetch(fullUrl, {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/xml, text/xml, */*',
-      },
+    // Node.js http/https 모듈을 사용하여 요청
+    return new Promise((resolve) => {
+      const request = http.get(fullUrl, (response) => {
+        let xmlData = '';
+
+        response.on('data', (chunk) => {
+          xmlData += chunk.toString();
+        });
+
+        response.on('end', () => {
+          if (response.statusCode !== 200) {
+            res.status(response.statusCode || 500).json({
+              error: 'API request failed',
+              status: response.statusCode,
+              statusText: response.statusMessage,
+            });
+            resolve(undefined);
+            return;
+          }
+
+          if (!xmlData || xmlData.trim().length === 0) {
+            res.status(500).json({
+              error: 'Empty response from API',
+            });
+            resolve(undefined);
+            return;
+          }
+
+          // XML을 그대로 반환
+          res.setHeader('Content-Type', 'application/xml; charset=utf-8');
+          res.status(200).send(xmlData);
+          resolve(undefined);
+        });
+      });
+
+      request.on('error', (error) => {
+        console.error('HTTP request error:', error);
+        res.status(500).json({
+          error: 'Proxy failed',
+          message: error.message,
+        });
+        resolve(undefined);
+      });
+
+      request.setTimeout(30000, () => {
+        request.destroy();
+        res.status(504).json({
+          error: 'Request timeout',
+          message: 'API request took too long',
+        });
+        resolve(undefined);
+      });
     });
-    
-    console.log('Response status:', response.status);
-    
-    if (!response.ok) {
-      const errorText = await response.text().catch(() => '');
-      res.status(response.status).json({
-        error: 'API request failed',
-        status: response.status,
-        statusText: response.statusText,
-        body: errorText.substring(0, 500),
-      });
-      return;
-    }
-
-    const xmlData = await response.text();
-    
-    if (!xmlData || xmlData.trim().length === 0) {
-      res.status(500).json({
-        error: 'Empty response from API',
-      });
-      return;
-    }
-
-    // XML을 그대로 반환 (클라이언트에서 파싱)
-    res.setHeader('Content-Type', 'application/xml; charset=utf-8');
-    res.status(200).send(xmlData);
   } catch (error) {
     console.error('Realtor API proxy error:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    const errorStack = error instanceof Error ? error.stack : undefined;
     
     res.status(500).json({
       error: 'Proxy failed',
       message: errorMessage,
-      details: error instanceof Error ? {
-        name: error.name,
-        stack: errorStack,
-      } : undefined,
     });
   }
 }
