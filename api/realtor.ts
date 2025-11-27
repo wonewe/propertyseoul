@@ -41,8 +41,8 @@ export default async function handler(
       return;
     }
 
-    // HTTP API URL 생성
-    const apiUrl = `http://openapi.molit.go.kr/OpenAPI_ToolInstallPackage/service/rest/RTMSOBJSvc/getRTMSDataSvcAptTradeDev`;
+    // HTTP API URL 생성 (HTTPS로 변경)
+    const apiUrl = `https://openapi.molit.go.kr/OpenAPI_ToolInstallPackage/service/rest/RTMSOBJSvc/getRTMSDataSvcAptTradeDev`;
     const params = new URLSearchParams({
       serviceKey: String(serviceKey),
       LAWD_CD: String(LAWD_CD),
@@ -59,7 +59,13 @@ export default async function handler(
 
     const fetchWithRetry = async (attempt = 1): Promise<void> => {
       return new Promise((resolve) => {
-        const request = http.get(fullUrl, (response) => {
+        // HTTPS 모듈 사용 및 헤더 추가
+        const request = https.get(fullUrl, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7'
+          }
+        }, (response) => {
           let xmlData = '';
 
           response.on('data', (chunk) => {
