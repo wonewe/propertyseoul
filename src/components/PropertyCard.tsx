@@ -1,3 +1,4 @@
+import { useRef, useEffect } from 'react';
 import type { Property } from '../types/property';
 import './PropertyCard.css';
 
@@ -16,6 +17,14 @@ export default function PropertyCard({
   onCompare,
   showCompareButton = true,
 }: PropertyCardProps) {
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (isSelected && cardRef.current) {
+      cardRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [isSelected]);
+
   const handleClick = () => {
     if (onSelect) {
       onSelect(property);
@@ -38,6 +47,7 @@ export default function PropertyCard({
 
   return (
     <div
+      ref={cardRef}
       className={`property-card ${isSelected ? 'selected' : ''}`}
       onClick={handleClick}
     >

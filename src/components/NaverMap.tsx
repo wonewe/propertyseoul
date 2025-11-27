@@ -96,6 +96,8 @@ export default function NaverMap({
     };
   }, []);
 
+  const coordinateCache = useRef<Record<string, { lat: number; lng: number }>>({});
+
   useEffect(() => {
     if (!mapLoaded || !mapRef.current || !window.naver) return;
 
@@ -117,18 +119,25 @@ export default function NaverMap({
     // 주소를 좌표로 변환하여 마커 표시
     if (properties.length > 0) {
       properties.forEach((property) => {
-        // 초기에는 결정론적 랜덤 좌표 사용 (빠른 렌더링)
-        const position = new window.naver.maps.LatLng(
-          property.latitude || 37.5665,
-          property.longitude || 126.9780
-        );
+        let position;
+
+        // 1. 캐시된 정확한 좌표가 있는지 확인
+        if (coordinateCache.current[property.id]) {
+          const cached = coordinateCache.current[property.id];
+          position = new window.naver.maps.LatLng(cached.lat, cached.lng);
+        }
+        // 2. 없으면 API에서 준 초기 좌표(결정론적 랜덤) 사용
+        else {
+          position = new window.naver.maps.LatLng(
+            property.latitude || 37.5665,
+            property.longitude || 126.9780
+          );
+        }
 
         const marker = createMarker(position, property);
 
-        // 실제 주소로 지오코딩 시도 (정확한 위치)
-        // 주의: 대량 요청 시 429 에러 발생 가능하므로 순차적으로 처리하거나 딜레이 필요할 수 있음
-        // 여기서는 개별적으로 시도
-        if (window.naver.maps.Service && window.naver.maps.Service.geocode) {
+        // 캐시가 없는 경우에만 지오코딩 시도
+        if (!coordinateCache.current[property.id] && window.naver.maps.Service && window.naver.maps.Service.geocode) {
           const query = property.addressDetail
             ? `${property.address} ${property.addressDetail}`
             : property.address;
@@ -139,8 +148,15 @@ export default function NaverMap({
             if (status === window.naver.maps.Service.Status.OK) {
               const result = response.v2.addresses[0];
               if (result) {
-                const newPosition = new window.naver.maps.LatLng(result.y, result.x);
+                const newLat = parseFloat(result.y);
+                const newLng = parseFloat(result.x);
+                const newPosition = new window.naver.maps.LatLng(newLat, newLng);
+
+                // 마커 위치 업데이트
                 marker.setPosition(newPosition);
+
+                // 캐시에 저장
+                coordinateCache.current[property.id] = { lat: newLat, lng: newLng };
               }
             } else {
               // 지오코딩 실패 시 (주소 불명확 등) 기존 좌표 유지
@@ -152,8 +168,15 @@ export default function NaverMap({
 
       // 선택된 부동산이 있으면 해당 위치로 이동
       if (selectedProperty) {
-        const lat = selectedProperty.latitude || 37.5665;
-        const lng = selectedProperty.longitude || 126.9780;
+        // 선택된 속성의 위치도 캐시에서 우선 확인
+        let lat = selectedProperty.latitude || 37.5665;
+        let lng = selectedProperty.longitude || 126.9780;
+
+        if (coordinateCache.current[selectedProperty.id]) {
+          lat = coordinateCache.current[selectedProperty.id].lat;
+          lng = coordinateCache.current[selectedProperty.id].lng;
+        }
+
         mapInstanceRef.current.setCenter(new window.naver.maps.LatLng(lat, lng));
         mapInstanceRef.current.setZoom(16);
       } else if (properties.length > 0) {
