@@ -115,21 +115,21 @@ export default function NaverMap({
 
     // 주소를 좌표로 변환하여 마커 표시
     if (properties.length > 0) {
-      properties.forEach((property, index) => {
+      properties.forEach((property) => {
         // 좌표가 있는 경우 직접 사용
         if (property.latitude && property.longitude) {
           const position = new window.naver.maps.LatLng(
             property.latitude,
             property.longitude
           );
-          createMarker(position, property, index);
+          createMarker(position, property);
         } else {
           // 좌표가 없는 경우 주소로 검색 (네이버 지오코딩 API 사용 가능)
           // 현재는 샘플 좌표 사용
           const sampleLat = 37.5665 + (Math.random() - 0.5) * 0.1;
           const sampleLng = 126.9780 + (Math.random() - 0.5) * 0.1;
           const position = new window.naver.maps.LatLng(sampleLat, sampleLng);
-          createMarker(position, property, index);
+          createMarker(position, property);
         }
       });
 
@@ -150,7 +150,7 @@ export default function NaverMap({
     }
   }, [mapLoaded, properties, selectedProperty]);
 
-  const createMarker = (position: any, property: Property, index: number) => {
+  const createMarker = (position: any, property: Property) => {
     const isSelected = selectedProperty?.id === property.id;
 
     const marker = new window.naver.maps.Marker({
