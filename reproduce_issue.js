@@ -6,7 +6,8 @@ const DEAL_YMD = '202511';
 const numOfRows = '100';
 const pageNo = '1';
 
-const apiUrl = `http://openapi.molit.go.kr/OpenAPI_ToolInstallPackage/service/rest/RTMSOBJSvc/getRTMSDataSvcAptTradeDev`;
+// Updated to use new endpoint apis.data.go.kr
+const apiUrl = `https://apis.data.go.kr/1613000/RTMSDataSvcAptTrade/getRTMSDataSvcAptTrade`;
 
 const fullUrl = `${apiUrl}?serviceKey=${serviceKey}&LAWD_CD=${LAWD_CD}&DEAL_YMD=${DEAL_YMD}&numOfRows=${numOfRows}&pageNo=${pageNo}`;
 
